@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Liora</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{--bg:#07070f;--s1:#0d0d1c;--s2:#14142a;--bd:rgba(255,255,255,0.07);--a:#a78bfa;--a2:#f472b6;--a3:#38bdf8;--tx:#f0eeff;--mt:#5a5a7a;--cd:rgba(255,255,255,0.04);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+#splashCanvas{position:absolute;inset:0;width:100%;height:100%;}
+.splash-text{position:relative;z-index:2;text-align:center;pointer-events:none;}
+.splash-logo{font-family:'Cormorant Garamond',serif;font-size:80px;font-weight:300;letter-spacing:12px;background:linear-gradient(135deg,#c4b5fd,#f472b6,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:splashPulse 2s ease-in-out infinite;}
+.splash-sub{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--mt);margin-top:10px;animation:fadeUp 1s 0.5s ease both;opacity:0;}
+.splash-bar{width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--a),var(--a2),transparent);margin:30px auto 0;animation:splashBar 2s ease-in-out infinite;}
+#splash.hide{animation:splashFade 0.8s ease forwards;}
+@keyframes splashPulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.3);}}
+@keyframes splashBar{0%,100%{opacity:0.3;transform:scaleX(0.5);}50%{opacity:1;transform:scaleX(1);}}
+@keyframes splashFade{to{opacity:0;pointer-events:none;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes popIn{from{opacity:0;transform:scale(0.85);}to{opacity:1;transform:scale(1);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-25px) scale(1.05);}}
+
+/* BG CANVAS (persistent 3D bg) */
+#bgCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;overflow:hidden;}
+.screen.active{display:flex;}
+
+/* AUTH */
+#authScreen{justify-content:center;align-items:center;padding:40px 28px;}
+.auth-logo{text-align:center;margin-bottom:44px;animation:fadeUp 0.8s ease both;}
+.auth-logo h1{font-family:'Cormorant Garamond',serif;font-size:68px;font-weight:300;letter-spacing:10px;background:linear-gradient(135deg,var(--a),var(--a2) 50%,var(--a3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-logo p{color:var(--mt);font-size:11px;letter-spacing:4px;text-transform:uppercase;margin-top:8px;}
+.auth-tabs{display:flex;background:rgba(255,255,255,0.04);border:1px solid var(--bd);border-radius:18px;padding:4px;margin-bottom:24px;width:100%;animation:fadeUp 0.8s 0.1s ease both;opacity:0;}
+.auth-tab{flex:1;padding:12px;text-align:center;border-radius:14px;cursor:pointer;font-size:14px;font-weight:500;color:var(--mt);transition:all 0.3s;}
+.auth-tab.active{background:var(--s2);color:var(--tx);box-shadow:0 2px 16px rgba(0,0,0,0.5);}
+.auth-form{width:100%;animation:fadeUp 0.8s 0.2s ease both;opacity:0;}
+.inp{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--bd);border-radius:16px;padding:16px 20px;color:var(--tx);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;transition:all 0.3s;margin-bottom:12px;display:block;}
+.inp:focus{border-color:rgba(167,139,250,0.5);background:var(--s2);box-shadow:0 0 0 4px rgba(167,139,250,0.08),0 0 20px rgba(167,139,250,0.05);}
+.inp::placeholder{color:var(--mt);}
+.btn-main{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;font-size:16px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.3s;margin-top:4px;position:relative;overflow:hidden;box-shadow:0 8px 30px rgba(167,139,250,0.25);}
+.btn-main:active{transform:scale(0.97);}
+.btn-main::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18),transparent);opacity:0;transition:opacity 0.3s;}
+.btn-main:hover::after{opacity:1;}
+.err{color:#f87171;font-size:13px;text-align:center;margin-top:10px;min-height:18px;}
+
+/* APP */
+#appScreen{background:transparent;}
+.app-body{flex:1;overflow:hidden;position:relative;}
+.pane{position:absolute;inset:0;overflow-y:auto;display:none;padding-bottom:115px;}
+.pane.active{display:block;}
+.pane::-webkit-scrollbar{display:none;}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;padding:0 16px 38px;background:linear-gradient(to top,var(--bg) 50%,transparent);}
+.bnav-inner{display:flex;background:rgba(10,10,22,0.88);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.08);border-radius:28px;padding:8px 4px;box-shadow:0 -8px 40px rgba(0,0,0,0.4);}
+.nitem{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;cursor:pointer;border-radius:20px;transition:all 0.3s;position:relative;}
+.nitem.active{background:rgba(167,139,250,0.12);}
+.nicon{font-size:22px;transition:transform 0.3s;}
+.nitem.active .nicon{transform:scale(1.2);}
+.nlabel{font-size:9px;font-weight:600;color:var(--mt);letter-spacing:1px;text-transform:uppercase;transition:color 0.3s;}
+.nitem.active .nlabel{color:var(--a);}
+.ndot{position:absolute;top:8px;right:calc(50% - 16px);width:7px;height:7px;background:var(--a2);border-radius:50%;display:none;border:2px solid var(--bg);}
+.ndot.show{display:block;}
+
+/* TOP BAR */
+.tbar{padding:54px 20px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;background:linear-gradient(to bottom,var(--bg) 50%,transparent);}
+.tbar-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:300;letter-spacing:2px;}
+.ibtn{width:40px;height:40px;border-radius:13px;background:rgba(255,255,255,0.05);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:all 0.2s;}
+.ibtn:active{transform:scale(0.88);}
+
+/* 3D CARD WRAPPER */
+.card3d{perspective:1000px;cursor:pointer;}
+.card3d-inner{transition:transform 0.15s ease;transform-style:preserve-3d;}
+.card3d:active .card3d-inner{transform:rotateX(2deg) rotateY(-2deg) scale(0.98);}
+
+/* FEED */
+.create-bar{margin:0 16px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--bd);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.25s;}
+.create-bar:active{transform:scale(0.98);background:rgba(255,255,255,0.05);}
+.cavatar{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;box-shadow:0 4px 14px rgba(167,139,250,0.3);}
+.chint{color:var(--mt);font-size:14px;}
+.fcard{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:24px;margin:0 16px 14px;overflow:hidden;animation:fadeUp 0.5s ease both;position:relative;}
+.fcard::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,0.2),rgba(244,114,182,0.2),transparent);}
+.fcard-head{display:flex;align-items:center;gap:12px;padding:16px 16px 10px;}
+.av{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;box-shadow:0 4px 12px rgba(167,139,250,0.2);}
+.fcard-meta{flex:1;}
+.fname{font-size:15px;font-weight:600;}
+.ftime{font-size:12px;color:var(--mt);margin-top:2px;}
+.fcard-body{padding:0 16px 14px;}
+.ftext{font-size:15px;line-height:1.65;color:rgba(240,238,255,0.88);}
+.fcard-actions{display:flex;padding:10px 8px;border-top:1px solid rgba(255,255,255,0.05);margin-top:2px;}
+.faction{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 4px;border-radius:12px;cursor:pointer;font-size:13px;color:var(--mt);transition:all 0.2s;font-weight:500;}
+.faction:active{background:rgba(255,255,255,0.05);transform:scale(0.9);}
+.faction.liked{color:var(--a2);}
+.faction .fi{font-size:19px;}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:200;display:none;align-items:flex-end;}
+.overlay.open{display:flex;animation:fadeIn 0.2s ease;}
+.mbox{background:rgba(13,13,26,0.98);border:1px solid rgba(255,255,255,0.08);border-radius:30px 30px 0 0;padding:20px 20px 44px;width:100%;max-height:85vh;overflow-y:auto;animation:slideUp 0.35s cubic-bezier(0.16,1,0.3,1);box-shadow:0 -20px 60px rgba(167,139,250,0.1);}
+.mbox::-webkit-scrollbar{display:none;}
+.mhandle{width:40px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin:0 auto 20px;}
+.mtitle{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;margin-bottom:18px;}
+.mta{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--bd);border-radius:16px;padding:16px;color:var(--tx);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;resize:none;min-height:120px;transition:all 0.3s;}
+.mta:focus{border-color:rgba(167,139,250,0.4);box-shadow:0 0 0 4px rgba(167,139,250,0.07),0 0 20px rgba(167,139,250,0.05);}
+.mta::placeholder{color:var(--mt);}
+.mactions{display:flex;gap:10px;margin-top:14px;}
+.mbtn-c{flex:1;padding:14px;border:1px solid var(--bd);border-radius:14px;background:transparent;color:var(--mt);font-size:15px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;}
+.mbtn-c:active{background:rgba(255,255,255,0.04);}
+.mbtn-s{flex:2;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 20px rgba(167,139,250,0.25);}
+.mbtn-s:active{transform:scale(0.97);}
+
+/* SECRETS */
+.sbar{padding:54px 20px 8px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;background:linear-gradient(to bottom,var(--bg) 50%,transparent);}
+.alias-pill{display:flex;align-items:center;gap:8px;background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.2);border-radius:14px;padding:10px 14px;}
+.alias-txt{font-size:13px;font-weight:700;color:var(--a);letter-spacing:1.5px;}
+.rbtn{width:30px;height:30px;border-radius:9px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all 0.35s;}
+.rbtn:active{transform:rotate(180deg) scale(0.85);}
+.hash-row{display:flex;gap:8px;padding:8px 16px 14px;overflow-x:auto;}
+.hash-row::-webkit-scrollbar{display:none;}
+.hchip{flex-shrink:0;padding:7px 14px;border-radius:11px;background:rgba(255,255,255,0.04);border:1px solid var(--bd);font-size:12px;font-weight:600;color:var(--mt);cursor:pointer;transition:all 0.2s;}
+.hchip.active{background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.35);color:var(--a);}
+.scard{margin:0 16px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:22px;padding:18px;position:relative;overflow:hidden;animation:fadeUp 0.5s ease both;transition:transform 0.15s,box-shadow 0.15s;}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,0.5),rgba(244,114,182,0.3),transparent);}
+.scard:active{transform:scale(0.985);box-shadow:0 0 30px rgba(167,139,250,0.1);}
+.salias{font-size:11px;font-weight:700;color:var(--a);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.salias::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--a);flex-shrink:0;box-shadow:0 0 6px var(--a);}
+.stext{font-size:16px;line-height:1.7;color:rgba(240,238,255,0.9);font-family:'Cormorant Garamond',serif;}
+.stags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.stag{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(167,139,250,0.08);color:var(--a);font-weight:600;border:1px solid rgba(167,139,250,0.15);}
+.sfooter{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);}
+.sreacts{display:flex;gap:5px;}
+.rbtn2{padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--bd);font-size:13px;cursor:pointer;transition:all 0.2s;}
+.rbtn2:active{transform:scale(0.88);}
+.rbtn2.done{background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.25);}
+.feel-btn{font-size:12px;font-weight:600;color:var(--a2);padding:6px 11px;border-radius:10px;background:rgba(244,114,182,0.07);border:1px solid rgba(244,114,182,0.18);cursor:pointer;transition:all 0.2s;}
+.feel-btn:active{transform:scale(0.93);}
+.sfoot2{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+.stime{font-size:11px;color:var(--mt);}
+.talk-link{font-size:12px;font-weight:500;color:var(--mt);padding:5px 8px;border-radius:9px;cursor:pointer;transition:all 0.2s;}
+.talk-link:active{background:rgba(255,255,255,0.06);}
+
+/* NEARBY */
+.nearby-toggle-card{margin:0 16px 20px;background:rgba(255,255,255,0.03);border:1px solid var(--bd);border-radius:22px;padding:20px;display:flex;align-items:center;justify-content:space-between;}
+.ntoggle{width:52px;height:28px;border-radius:14px;background:rgba(255,255,255,0.07);border:1px solid var(--bd);position:relative;cursor:pointer;transition:all 0.3s;flex-shrink:0;}
+.ntoggle.on{background:linear-gradient(135deg,var(--a),var(--a2));border-color:transparent;box-shadow:0 0 20px rgba(167,139,250,0.3);}
+.nknob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:all 0.3s;box-shadow:0 2px 8px rgba(0,0,0,0.4);}
+.ntoggle.on .nknob{left:27px;}
+.nearby-card{margin:0 16px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--bd);border-radius:22px;padding:18px;display:flex;align-items:center;gap:14px;animation:fadeUp 0.5s ease both;transition:all 0.2s;}
+.nearby-card:active{transform:scale(0.98);}
+.ninfo{flex:1;}
+.nname{font-size:15px;font-weight:600;}
+.ndist{font-size:12px;color:var(--a);margin-top:3px;}
+.nmood{font-size:12px;color:var(--mt);margin-top:2px;}
+.wave-btn{padding:9px 16px;border-radius:12px;background:rgba(167,139,250,0.09);border:1px solid rgba(167,139,250,0.2);color:var(--a);font-size:14px;cursor:pointer;transition:all 0.2s;font-weight:500;white-space:nowrap;}
+.wave-btn:active{transform:scale(0.9);}
+
+/* PROFILE */
+.phero{padding:54px 20px 20px;text-align:center;}
+.pavatar-wrap{position:relative;width:100px;height:100px;margin:0 auto 16px;}
+.pavatar-ring{position:absolute;inset:-4px;border-radius:32px;background:linear-gradient(135deg,var(--a),var(--a2),var(--a3));opacity:0.5;filter:blur(2px);animation:orbFloat 4s ease-in-out infinite;}
+.pavatar{width:100px;height:100px;border-radius:30px;background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;position:relative;z-index:1;}
+.pname{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:300;margin-bottom:6px;}
+.pemail{color:var(--mt);font-size:14px;}
+.pstats{display:flex;margin:20px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--bd);border-radius:22px;overflow:hidden;}
+.pstat{flex:1;padding:18px;text-align:center;}
+.pstat+.pstat{border-left:1px solid var(--bd);}
+.pstat-n{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;background:linear-gradient(135deg,var(--a),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.pstat-l{font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+.psec{padding:0 16px;margin-bottom:20px;}
+.psec-title{font-size:11px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;}
+.logout-btn{width:calc(100% - 32px);margin:0 16px 24px;padding:16px;border-radius:18px;background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);color:#f87171;font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;}
+.logout-btn:active{transform:scale(0.97);}
+
+/* CONFIRM */
+.cmodal{position:fixed;inset:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:300;display:none;align-items:center;justify-content:center;padding:24px;}
+.cmodal.open{display:flex;animation:fadeIn 0.2s ease;}
+.cbox{background:rgba(13,13,26,0.98);border:1px solid rgba(255,255,255,0.08);border-radius:28px;padding:32px 24px;width:100%;animation:popIn 0.3s cubic-bezier(0.16,1,0.3,1);}
+.cbox h3{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;text-align:center;margin-bottom:10px;}
+.cbox p{color:var(--mt);font-size:14px;line-height:1.65;text-align:center;margin-bottom:22px;}
+.cinp{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--bd);border-radius:14px;padding:14px;color:var(--tx);font-size:16px;font-family:'DM Sans',sans-serif;outline:none;text-align:center;letter-spacing:5px;font-weight:700;margin-bottom:14px;transition:border-color 0.3s;}
+.cinp:focus{border-color:rgba(167,139,250,0.4);}
+
+/* TOAST */
+.toast{position:fixed;top:66px;left:50%;transform:translateX(-50%) translateY(-14px);background:rgba(10,10,22,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:11px 20px;font-size:14px;font-weight:500;z-index:500;opacity:0;transition:all 0.3s;white-space:nowrap;box-shadow:0 8px 40px rgba(0,0,0,0.6);backdrop-filter:blur(16px);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* UTILS */
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--mt);font-size:14px;gap:10px;}
+.spin{width:18px;height:18px;border:2px solid var(--bd);border-top-color:var(--a);border-radius:50%;animation:spin 0.8s linear infinite;}
+.empty{padding:60px 32px;text-align:center;}
+.empty .em{font-size:52px;display:block;margin-bottom:14px;animation:float 3s ease-in-out infinite;}
+.empty h3{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:8px;}
+.empty p{color:var(--mt);font-size:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <canvas id="splashCanvas"></canvas>
+  <div class="splash-text">
+    <div class="splash-logo">liora</div>
+    <div class="splash-sub">discover · connect · confess</div>
+    <div class="splash-bar"></div>
+  </div>
+</div>
+
+<!-- PERSISTENT 3D BACKGROUND -->
+<canvas id="bgCanvas"></canvas>
+
+<div class="toast" id="toast"></div>
+
+<!-- AUTH -->
+<div class="screen" id="authScreen">
+  <div class="auth-logo">
+    <h1>liora</h1>
+    <p>discover · connect · confess</p>
+  </div>
+  <div class="auth-tabs">
+    <div class="auth-tab active" onclick="swAuth('login')">Sign In</div>
+    <div class="auth-tab" onclick="swAuth('signup')">Create Account</div>
+  </div>
+  <div class="auth-form">
+    <input class="inp" type="text" id="nameInp" placeholder="Your name" style="display:none"/>
+    <input class="inp" type="email" id="emailInp" placeholder="Email address"/>
+    <input class="inp" type="password" id="passInp" placeholder="Password"/>
+    <button class="btn-main" onclick="doAuth()" id="authBtn">Sign In</button>
+    <div class="err" id="authErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="screen" id="appScreen">
+  <div class="app-body">
+
+    <!-- FEED -->
+    <div class="pane active" id="tab-feed">
+      <div class="tbar">
+        <div class="tbar-title">liora</div>
+        <div class="ibtn" onclick="openM('postModal')">✦</div>
+      </div>
+      <div class="create-bar" onclick="openM('postModal')">
+        <div class="cavatar" id="cAvatar">✦</div>
+        <div class="chint">Share something with the world…</div>
+      </div>
+      <div id="feedBox"><div class="loading"><div class="spin"></div>Loading…</div></div>
+    </div>
+
+    <!-- NEARBY -->
+    <div class="pane" id="tab-nearby">
+      <div class="tbar"><div class="tbar-title">Nearby</div></div>
+      <div class="nearby-toggle-card">
+        <div>
+          <div style="font-size:16px;font-weight:600;">Go Visible</div>
+          <div style="font-size:12px;color:var(--mt);margin-top:3px;">Let others discover you nearby</div>
+        </div>
+        <div class="ntoggle" id="nToggle" onclick="toggleNearby()"><div class="nknob"></div></div>
+      </div>
+      <div id="nearbyBox">
+        <div class="empty"><span class="em">📡</span><h3>Enable discovery</h3><p>Turn on visibility to see people around you.</p></div>
+      </div>
+    </div>
+
+    <!-- SECRETS -->
+    <div class="pane" id="tab-secrets">
+      <div class="sbar">
+        <div class="alias-pill">
+          <div class="alias-txt" id="aliasDisp">Anon_…</div>
+          <div class="rbtn" onclick="confirmRefresh()">↻</div>
+        </div>
+        <div class="ibtn" onclick="openM('secretModal')">+ Secret</div>
+      </div>
+      <div class="hash-row">
+        <div class="hchip active" onclick="filterS('all',this)">All</div>
+        <div class="hchip" onclick="filterS('crush',this)">#crush</div>
+        <div class="hchip" onclick="filterS('confession',this)">#confession</div>
+        <div class="hchip" onclick="filterS('advice',this)">#advice</div>
+        <div class="hchip" onclick="filterS('venting',this)">#venting</div>
+        <div class="hchip" onclick="filterS('love',this)">#love</div>
+        <div class="hchip" onclick="filterS('friendship',this)">#friendship</div>
+      </div>
+      <div id="secretsBox"><div class="loading"><div class="spin"></div>Loading…</div></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="pane" id="tab-profile">
+      <div class="phero">
+        <div class="pavatar-wrap">
+          <div class="pavatar-ring"></div>
+          <div class="pavatar"><span id="pInitial">?</span></div>
+        </div>
+        <div class="pname" id="pName">—</div>
+        <div class="pemail" id="pEmail"></div>
+      </div>
+      <div class="pstats">
+        <div class="pstat"><div class="pstat-n" id="sPosts">0</div><div class="pstat-l">Posts</div></div>
+        <div class="pstat"><div class="pstat-n" id="sSecrets">0</div><div class="pstat-l">Secrets</div></div>
+        <div class="pstat"><div class="pstat-n" id="sReacts">0</div><div class="pstat-l">Reactions</div></div>
+      </div>
+      <div class="psec">
+        <div class="psec-title">Your Anonymous Alias</div>
+        <div class="alias-pill" style="display:inline-flex">
+          <div class="alias-txt" id="pAlias">Anon_…</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="bnav-inner">
+      <div class="nitem active" onclick="swTab('feed',this)"><div class="nicon">✦</div><div class="nlabel">Feed</div></div>
+      <div class="nitem" onclick="swTab('nearby',this)"><div class="nicon">◎</div><div class="nlabel">Nearby</div></div>
+      <div class="nitem" onclick="swTab('secrets',this)"><div class="nicon">◈</div><div class="nlabel">Secrets</div><div class="ndot" id="sDot"></div></div>
+      <div class="nitem" onclick="swTab('profile',this)"><div class="nicon">⊙</div><div class="nlabel">Profile</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="postModal">
+  <div class="mbox">
+    <div class="mhandle"></div>
+    <div class="mtitle">New Post</div>
+    <textarea class="mta" id="postTxt" placeholder="What's on your mind…" rows="4"></textarea>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM('postModal')">Cancel</button>
+      <button class="mbtn-s" onclick="doPost()">Share ✦</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="secretModal">
+  <div class="mbox">
+    <div class="mhandle"></div>
+    <div class="mtitle">New Secret</div>
+    <textarea class="mta" id="secretTxt" placeholder="Tell the world anonymously…" rows="4"></textarea>
+    <input class="inp" type="text" id="secretTags" placeholder="#crush #advice (add 2–5 tags)" style="margin-top:10px;"/>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeM('secretModal')">Cancel</button>
+      <button class="mbtn-s" onclick="doSecret()">Post Secretly ◈</button>
+    </div>
+  </div>
+</div>
+
+<div class="cmodal" id="refreshModal">
+  <div class="cbox">
+    <h3>Change Identity?</h3>
+    <p>Your alias changes for future secrets. Old secrets remain under your current alias.</p>
+    <input class="cinp" id="cInp" placeholder="TYPE: CHANGE" oninput="chkConfirm()"/>
+    <div class="mactions">
+      <button class="mbtn-c" onclick="closeRefresh()">Cancel</button>
+      <button class="mbtn-s" id="cBtn" disabled onclick="doRefresh()" style="opacity:0.35;transition:opacity 0.3s;">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// THREE.JS — SPLASH SCREEN
+// ══════════════════════════════════════
+(function initSplash(){
+  const canvas = document.getElementById('splashCanvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.z = 4;
+
+  // Geometry: floating particles + central orb
+  const particles = new THREE.BufferGeometry();
+  const count = 800;
+  const pos = new Float32Array(count * 3);
+  for(let i=0;i<count*3;i++) pos[i] = (Math.random()-0.5)*10;
+  particles.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const pMat = new THREE.PointsMaterial({size:0.025, color:0xa78bfa, transparent:true, opacity:0.7});
+  scene.add(new THREE.Points(particles, pMat));
+
+  // Central glowing sphere
+  const sphereGeo = new THREE.SphereGeometry(1, 64, 64);
+  const sphereMat = new THREE.MeshStandardMaterial({
+    color:0x1a0a2e, emissive:0x7c3aed, emissiveIntensity:0.4,
+    metalness:0.8, roughness:0.1, wireframe:false
+  });
+  const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+  scene.add(sphere);
+
+  // Wireframe ring
+  const ringGeo = new THREE.TorusGeometry(1.5, 0.008, 16, 100);
+  const ringMat = new THREE.MeshBasicMaterial({color:0xa78bfa, transparent:true, opacity:0.4});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/3;
+  scene.add(ring);
+
+  const ring2 = new THREE.Mesh(
+    new THREE.TorusGeometry(1.8, 0.005, 16, 100),
+    new THREE.MeshBasicMaterial({color:0xf472b6, transparent:true, opacity:0.25})
+  );
+  ring2.rotation.x = -Math.PI/4;
+  ring2.rotation.z = Math.PI/6;
+  scene.add(ring2);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x1a0a2e, 1));
+  const pLight = new THREE.PointLight(0xa78bfa, 3, 10);
+  pLight.position.set(2,2,2);
+  scene.add(pLight);
+  const pLight2 = new THREE.PointLight(0xf472b6, 2, 10);
+  pLight2.position.set(-2,-1,1);
+  scene.add(pLight2);
+
+  let t=0;
+  function animate(){
+    if(!document.getElementById('splash')) return;
+    requestAnimationFrame(animate);
+    t+=0.008;
+    sphere.rotation.y = t*0.5;
+    sphere.rotation.x = Math.sin(t*0.3)*0.2;
+    ring.rotation.z = t*0.3;
+    ring2.rotation.y = t*0.2;
+    pLight.position.x = Math.sin(t)*2.5;
+    pLight.position.y = Math.cos(t*0.7)*2;
+    pLight2.position.x = Math.cos(t*1.3)*2;
+    pLight2.position.y = Math.sin(t*0.9)*2;
+    // Particle drift
+    const p = particles.attributes.position.array;
+    for(let i=1;i<p.length;i+=3) p[i] += Math.sin(t+i)*0.0005;
+    particles.attributes.position.needsUpdate=true;
+    renderer.render(scene,camera);
+  }
+  animate();
+
+  // Hide splash after 2.8s
+  setTimeout(()=>{
+    const splash = document.getElementById('splash');
+    splash.classList.add('hide');
+    setTimeout(()=>{ splash.style.display='none'; renderer.dispose(); }, 800);
+  }, 2800);
+})();
+
+// ══════════════════════════════════════
+// THREE.JS — PERSISTENT BACKGROUND
+// ══════════════════════════════════════
+(function initBg(){
+  const canvas = document.getElementById('bgCanvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:false, alpha:true});
+  renderer.setPixelRatio(1);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.z = 5;
+
+  // Floating orbs
+  const orbGeo = new THREE.SphereGeometry(0.8, 32, 32);
+  const orb1 = new THREE.Mesh(orbGeo, new THREE.MeshBasicMaterial({color:0xa78bfa, transparent:true, opacity:0.06}));
+  orb1.position.set(3, 2, -2);
+  scene.add(orb1);
+
+  const orb2 = new THREE.Mesh(
+    new THREE.SphereGeometry(0.6,32,32),
+    new THREE.MeshBasicMaterial({color:0xf472b6, transparent:true, opacity:0.05})
+  );
+  orb2.position.set(-3,-2,-1);
+  scene.add(orb2);
+
+  // Subtle grid plane
+  const gridGeo = new THREE.PlaneGeometry(20,20,20,20);
+  const gridMat = new THREE.MeshBasicMaterial({color:0xa78bfa, wireframe:true, transparent:true, opacity:0.025});
+  const grid = new THREE.Mesh(gridGeo, gridMat);
+  grid.rotation.x = -Math.PI/2.5;
+  grid.position.y = -3;
+  scene.add(grid);
+
+  // Small floating particles
+  const pGeo = new THREE.BufferGeometry();
+  const pCount=200;
+  const pPos=new Float32Array(pCount*3);
+  for(let i=0;i<pCount*3;i++) pPos[i]=(Math.random()-0.5)*14;
+  pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+  scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({size:0.02,color:0xa78bfa,transparent:true,opacity:0.35})));
+
+  let touched={x:0,y:0};
+  window.addEventListener('touchmove',e=>{
+    touched.x=(e.touches[0].clientX/window.innerWidth-0.5)*0.3;
+    touched.y=(e.touches[0].clientY/window.innerHeight-0.5)*0.3;
+  });
+
+  let bt=0;
+  function animateBg(){
+    requestAnimationFrame(animateBg);
+    bt+=0.005;
+    orb1.position.y = 2+Math.sin(bt)*0.5;
+    orb2.position.y = -2+Math.cos(bt*0.7)*0.4;
+    camera.position.x += (touched.x - camera.position.x)*0.02;
+    camera.position.y += (-touched.y - camera.position.y)*0.02;
+    renderer.render(scene,camera);
+  }
+  animateBg();
+
+  window.addEventListener('resize',()=>{
+    camera.aspect=window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
+  });
+})();
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, query, orderBy, limit, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const fbApp = initializeApp({
+  apiKey:"AIzaSyB93RrKtkEbC7AO6kPbQ6BMaOUPrEjvqME",
+  authDomain:"liora-84049.firebaseapp.com",
+  projectId:"liora-84049",
+  storageBucket:"liora-84049.firebasestorage.app",
+  messagingSenderId:"358199565243",
+  appId:"1:358199565243:web:408d7e7edab8b35817c29e"
+});
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+let me=null, myAlias=null, nearbyOn=false, curFilter='all', authMode='login';
+
+function genAlias(){
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return 'Anon_'+Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');
+}
+
+onAuthStateChanged(auth, async u=>{
+  if(u){me=u;await setupUser(u);showApp();}
+  else{me=null;showAuth();}
+});
+
+async function setupUser(u){
+  const ref=doc(db,'users',u.uid);
+  const snap=await getDoc(ref);
+  if(!snap.exists()){
+    const alias=genAlias();
+    await setDoc(ref,{name:u.displayName||u.email.split('@')[0],email:u.email,alias,aliasHistory:[alias],refreshCount:0,lastRefresh:null,posts:0,secrets:0,reactions:0,joined:serverTimestamp()});
+    myAlias=alias;
+  } else { myAlias=snap.data().alias; }
+  refreshUI(u, snap.exists()?snap.data():{posts:0,secrets:0,reactions:0});
+}
+
+function showApp(){
+  document.getElementById('authScreen').classList.remove('active');
+  document.getElementById('appScreen').classList.add('active');
+  document.getElementById('cAvatar').textContent=(me.displayName||me.email||'L')[0].toUpperCase();
+  setAlias(myAlias||'Anon_…');
+  loadFeed(); loadSecrets();
+}
+function showAuth(){
+  document.getElementById('authScreen').classList.add('active');
+  document.getElementById('appScreen').classList.remove('active');
+}
+function setAlias(a){
+  document.getElementById('aliasDisp').textContent=a;
+  document.getElementById('pAlias').textContent=a;
+}
+function refreshUI(u,d){
+  const name=u.displayName||d.name||u.email.split('@')[0];
+  document.getElementById('pInitial').textContent=name[0].toUpperCase();
+  document.getElementById('pName').textContent=name;
+  document.getElementById('pEmail').textContent=u.email;
+  document.getElementById('sPosts').textContent=d.posts||0;
+  document.getElementById('sSecrets').textContent=d.secrets||0;
+  document.getElementById('sReacts').textContent=d.reactions||0;
+}
+
+window.swAuth=function(mode){
+  authMode=mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(mode==='login'&&i===0)||(mode==='signup'&&i===1)));
+  document.getElementById('nameInp').style.display=mode==='signup'?'block':'none';
+  document.getElementById('authBtn').textContent=mode==='signup'?'Create Account':'Sign In';
+  document.getElementById('authErr').textContent='';
+};
+
+window.doAuth = async function() {
+  const email = document.getElementById('emailInp').value.trim();
+  const pass = document.getElementById('passInp').value;
+  const name = document.getElementById('nameInp').value.trim();
+  const err = document.getElementById('authErr');
+
+  err.textContent = '';
+
+  // ✅ ADD HERE
+  if (!email || !pass) {
+    err.textContent = "Please fill all fields.";
+    return;
+  }
+
+  if (!email.includes("@")) {
+    err.textContent = "Enter a valid email";
+    return;
+  }
+
+  document.getElementById('authBtn').textContent = '…';
+
+  try {
+    if (authMode === 'signup') {
+      const c = await createUserWithEmailAndPassword(auth, email, pass);
+      await updateProfile(c.user, {
+        displayName: name || email.split('@')[0]
+      });
+    } else {
+      await signInWithEmailAndPassword(auth, email, pass);
+    }
+  } catch (e) {
+    console.error("FULL ERROR:", e); // 👈 keep this for debugging
+    err.textContent = e.message;
+    document.getElementById('authBtn').textContent =
+      authMode === 'signup' ? 'Create Account' : 'Sign In';
+  }
+};
+window.doLogout=async()=>{ await signOut(auth); };
+
+// FEED
+import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let unsubscribeFeed = null;
+
+function loadFeed() {
+  const box = document.getElementById('feedBox');
+
+  if (unsubscribeFeed) unsubscribeFeed();
+
+  box.innerHTML = '<div class="loading"><div class="spin"></div>Loading…</div>';
+
+  const q = query(
+    collection(db, 'posts'),
+    orderBy('createdAt', 'desc'),
+    limit(30)
+  );
+
+  unsubscribeFeed = onSnapshot(q, (snap) => {
+    if (snap.empty) {
+      box.innerHTML = `
+        <div class="empty">
+          <span class="em">✦</span>
+          <h3>No posts yet</h3>
+          <p>Be the first to share something.</p>
+        </div>`;
+      return;
+    }
+
+    box.innerHTML = '';
+    snap.forEach((docSnap, i) => {
+      box.appendChild(mkPost(docSnap.id, docSnap.data(), i));
+    });
+  }, (err) => {
+    box.innerHTML = `
+      <div class="empty">
+        <span class="em">⚠</span>
+        <h3>Realtime failed</h3>
+        <p>${err.message}</p>
+      </div>`;
+  });
+}
+function mkPost(id,d,i){
+  const el=document.createElement('div');
+  el.className='fcard card3d';el.style.animationDelay=i*0.07+'s';
+  const name=d.authorName||'Anon';
+  const liked=(d.likedBy||[]).includes(me?.uid);
+  el.innerHTML=`<div class="card3d-inner"><div class="fcard-head"><div class="av">${esc(name[0].toUpperCase())}</div><div class="fcard-meta"><div class="fname">${esc(name)}</div><div class="ftime">${relT(d.createdAt)}</div></div></div><div class="fcard-body"><div class="ftext">${esc(d.text||'')}</div></div><div class="fcard-actions"><div class="faction${liked?' liked':''}" onclick="doLike('${id}',this)"><span class="fi">${liked?'♥':'♡'}</span>${d.likes||0}</div><div class="faction"><span class="fi">◎</span>${d.comments||0}</div><div class="faction"><span class="fi">↑</span>Share</div></div></div>`;
+  return el;
+}
+window.doLike=async function(id,el){
+  if(!me)return;
+  const ref=doc(db,'posts',id);
+  const snap=await getDoc(ref);if(!snap.exists())return;
+  const d=snap.data();
+  const liked=(d.likedBy||[]).includes(me.uid);
+  const lb=liked?(d.likedBy||[]).filter(u=>u!==me.uid):[...(d.likedBy||[]),me.uid];
+  await updateDoc(ref,{likes:lb.length,likedBy:lb});
+  el.className='faction'+(liked?'':' liked');
+  el.innerHTML=`<span class="fi">${liked?'♡':'♥'}</span>${lb.length}`;
+  showToast(liked?'Unliked':'Liked ♥');
+};
+window.doPost=async function(){
+  const txt=document.getElementById('postTxt').value.trim();
+  if(!txt){showToast('Write something first!');return;}
+  closeM('postModal');
+  try{
+    await addDoc(collection(db,'posts'),{text:txt,authorId:me.uid,authorName:me.displayName||me.email.split('@')[0],likes:0,likedBy:[],comments:0,createdAt:serverTimestamp()});
+    await updateDoc(doc(db,'users',me.uid),{posts:increment(1)});
+    document.getElementById('postTxt').value='';
+    showToast('Posted ✦');loadFeed();
+  }catch(e){showToast('Failed to post.');}
+};
+
+// SECRETS
+async function loadSecrets(filter='all'){
+  const box=document.getElementById('secretsBox');
+  box.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  try{
+    const snap=await getDocs(query(collection(db,'secrets'),orderBy('createdAt','desc'),limit(40)));
+    if(snap.empty){box.innerHTML='<div class="empty"><span class="em">◈</span><h3>No secrets yet</h3><p>Be the first. No one will ever know.</p></div>';return;}
+    box.innerHTML='';let shown=0;
+    snap.forEach((d,i)=>{
+      const data=d.data();
+      if(filter!=='all'&&!(data.hashtags||[]).includes(filter))return;
+      box.appendChild(mkSecret(d.id,data,shown++));
+    });
+    if(!shown)box.innerHTML='<div class="empty"><span class="em">◈</span><h3>No secrets here</h3><p>Try a different tag.</p></div>';
+  }catch(e){box.innerHTML='<div class="empty"><span class="em">⚠</span><h3>Could not load</h3><p>Check your connection.</p></div>';}
+}
+function mkSecret(id,d,i){
+  const el=document.createElement('div');el.className='scard';el.style.animationDelay=i*0.06+'s';
+  const r=d.reactions||{fire:0,heart:0,cry:0};
+  const isOwn=d.authorId===me?.uid;
+  el.innerHTML=`<div class="salias">${esc(d.alias||'Anon_????')}</div><div class="stext">${esc(d.text||'')}</div>${(d.hashtags||[]).length?`<div class="stags">${(d.hashtags||[]).map(t=>`<div class="stag">#${esc(t)}</div>`).join('')}</div>`:''}<div class="sfooter"><div class="sreacts"><div class="rbtn2" onclick="doReact('${id}','fire',this)">🔥 ${r.fire||0}</div><div class="rbtn2" onclick="doReact('${id}','heart',this)">💜 ${r.heart||0}</div><div class="rbtn2" onclick="doReact('${id}','cry',this)">😢 ${r.cry||0}</div></div><div class="feel-btn" onclick="doFeel('${id}',this)">I feel this too${d.feels?` · ${d.feels}`:''}</div></div><div class="sfoot2"><div class="stime">Posted recently</div>${!isOwn?`<div class="talk-link" onclick="doTalk()">Request to Talk →</div>`:'<div class="stime" style="color:var(--a)">Your secret</div>'}</div>`;
+  return el;
+}
+window.doReact=async function(id,type,el){
+  if(!me)return;
+  const ref=doc(db,'secrets',id);
+  const snap=await getDoc(ref);if(!snap.exists())return;
+  const r=snap.data().reactions||{fire:0,heart:0,cry:0};r[type]=(r[type]||0)+1;
+  await updateDoc(ref,{reactions:r});
+  el.classList.add('done');
+  el.textContent=`${type==='fire'?'🔥':type==='heart'?'💜':'😢'} ${r[type]}`;
+  showToast('Reacted!');
+};
+window.doFeel=async function(id,el){
+  if(!me)return;
+  await updateDoc(doc(db,'secrets',id),{feels:increment(1)});
+  const snap=await getDoc(doc(db,'secrets',id));
+  el.textContent=`I feel this too · ${snap.data().feels||1}`;
+  el.style.background='rgba(244,114,182,0.14)';el.style.color='var(--a2)';
+  showToast('💜 Same');
+};
+window.doTalk=()=>showToast('Talk request sent anonymously →');
+window.doSecret=async function(){
+  const txt=document.getElementById('secretTxt').value.trim();
+  const raw=document.getElementById('secretTags').value;
+  if(!txt){showToast('Write your secret first!');return;}
+  const tags=(raw.match(/#\w+/g)||[]).slice(0,5);
+  if(tags.length<2){showToast('Add at least 2 hashtags!');return;}
+  closeM('secretModal');showToast('Posting secretly…');
+  setTimeout(async()=>{
+    try{
+      await addDoc(collection(db,'secrets'),{text:txt,alias:myAlias,authorId:me.uid,hashtags:tags.map(t=>t.slice(1).toLowerCase()),reactions:{fire:0,heart:0,cry:0},feels:0,createdAt:serverTimestamp()});
+      await updateDoc(doc(db,'users',me.uid),{secrets:increment(1)});
+      document.getElementById('secretTxt').value='';document.getElementById('secretTags').value='';
+      showToast('Secret posted ◈');document.getElementById('sDot').classList.add('show');
+      loadSecrets(curFilter);
+    }catch(e){showToast('Failed to post secret.');}
+  },(Math.random()*8+2)*1000);
+};
+window.filterS=function(tag,el){
+  curFilter=tag;
+  document.querySelectorAll('.hchip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');loadSecrets(tag);
+};
+
+// ALIAS
+window.confirmRefresh=()=>{document.getElementById('refreshModal').classList.add('open');document.getElementById('cInp').value='';document.getElementById('cBtn').disabled=true;document.getElementById('cBtn').style.opacity='0.35';};
+window.closeRefresh=()=>document.getElementById('refreshModal').classList.remove('open');
+window.chkConfirm=()=>{const ok=document.getElementById('cInp').value==='CHANGE';document.getElementById('cBtn').disabled=!ok;document.getElementById('cBtn').style.opacity=ok?'1':'0.35';};
+window.doRefresh=async function(){
+  closeRefresh();const a=genAlias();
+  try{
+    const ref=doc(db,'users',me.uid);const snap=await getDoc(ref);
+    await updateDoc(ref,{alias:a,aliasHistory:[...(snap.data().aliasHistory||[]),a],refreshCount:increment(1),lastRefresh:serverTimestamp()});
+    myAlias=a;setAlias(a);showToast('New alias: '+a+' ↻');
+  }catch(e){showToast('Refresh failed.');}
+};
+
+// NEARBY
+window.toggleNearby=function(){
+  nearbyOn=!nearbyOn;
+  document.getElementById('nToggle').classList.toggle('on',nearbyOn);
+  const box=document.getElementById('nearbyBox');
+  if(nearbyOn){
+    showToast('You are now visible ◎');box.innerHTML='';
+    [{name:'Zara',dist:'within 15m',mood:'Just vibing ✨'},{name:'Kai',dist:'within 30m',mood:'Open to chat 👋'},{name:'Nova',dist:'within 45m',mood:'Studying 📚'},{name:'Arlo',dist:'within 50m',mood:'Open to network 🤝'}].forEach((u,i)=>{
+      const el=document.createElement('div');el.className='nearby-card';el.style.animationDelay=i*0.1+'s';
+      el.innerHTML=`<div class="av" style="background:linear-gradient(135deg,var(--a3),var(--a));box-shadow:0 4px 14px rgba(56,189,248,0.2)">${u.name[0]}</div><div class="ninfo"><div class="nname">${u.name}</div><div class="ndist">◎ ${u.dist}</div><div class="nmood">${u.mood}</div></div><div class="wave-btn" onclick="doWave('${u.name}',this)">Wave 👋</div>`;
+      box.appendChild(el);
+    });
+  } else {
+    box.innerHTML='<div class="empty"><span class="em">📡</span><h3>Enable discovery</h3><p>Turn on visibility to see people around you.</p></div>';
+  }
+};
+window.doWave=function(name,btn){btn.textContent='Waved ✓';btn.style.background='rgba(167,139,250,0.2)';btn.style.color='var(--a)';showToast('Waved at '+name+' 👋');};
+
+// NAV & MODALS
+window.swTab=function(tab,el){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nitem').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');el.classList.add('active');
+  if(tab==='secrets')document.getElementById('sDot').classList.remove('show');
+};
+window.openM=id=>document.getElementById(id).classList.add('open');
+window.closeM=id=>document.getElementById(id).classList.remove('open');
+document.querySelectorAll('.overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// TOAST
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300);}
+window.showToast=showToast;
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function relT(ts){if(!ts)return'just now';const d=ts.toDate?ts.toDate():new Date(ts);const s=(Date.now()-d)/1000;if(s<60)return'just now';if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;}
+</script>
+</body>
+</html>
